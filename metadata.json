@@ -1,0 +1,6 @@
+{
+  "name": "Lust Web APK",
+  "description": "Turn your websites and web apps into native Android APK packages easily with offline configuration management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

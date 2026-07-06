@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: lust_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: lust_admin
+      POSTGRES_PASSWORD: lust_secure_password_102
+      POSTGRES_DB: lust_web_apk_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lust_admin -d lust_web_apk_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lust_redis_broker
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lust_fastapi_server
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://lust_admin:lust_secure_password_102@db:5432/lust_web_apk_db
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7
+      - ALGORITHM=HS256
+      - ENCRYPTION_KEY=fR4q9Xm5p2Zt1v7xK8w4e6r8M0u2i1o3
+    volumes:
+      - .:/workspace
+      - app_storage:/storage
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lust_celery_worker
+    restart: always
+    command: celery -A app.tasks.worker.celery_app worker --loglevel=info -c 2
+    environment:
+      - DATABASE_URL=postgresql://lust_admin:lust_secure_password_102@db:5432/lust_web_apk_db
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7
+      - ALGORITHM=HS256
+      - ENCRYPTION_KEY=fR4q9Xm5p2Zt1v7xK8w4e6r8M0u2i1o3
+    volumes:
+      - .:/workspace
+      - app_storage:/storage
+      - gradle_cache:/root/.gradle
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  app_storage:
+  gradle_cache:
