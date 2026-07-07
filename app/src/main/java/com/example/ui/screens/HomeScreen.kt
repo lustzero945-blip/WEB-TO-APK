@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.Download
@@ -59,9 +60,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +82,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.WebApkProject
+import com.example.data.LocalStorage
+import com.example.data.RecentConfig
 import com.example.ui.WebApkViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -240,6 +246,14 @@ fun HomeScreen(
                 storageSize = storageInfo.first,
                 storageStatus = storageInfo.second,
                 onClearHistory = { showClearAllCacheDialog = true }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            ReactUrlTriggerComponent(
+                context = LocalContext.current,
+                viewModel = viewModel,
+                onNavigateToConsole = onNavigateToConsole
             )
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -903,6 +917,281 @@ fun SpecTagChip(text: String, icon: androidx.compose.ui.graphics.vector.ImageVec
                 color = Color.DarkGray,
                 maxLines = 1
             )
+        }
+    }
+}
+
+@Composable
+fun ReactUrlTriggerComponent(
+    context: Context,
+    viewModel: WebApkViewModel,
+    onNavigateToConsole: (WebApkProject) -> Unit
+) {
+    // 1. Local state (React style hooks using Compose mutableStateOf)
+    var inputUrl by remember { mutableStateOf("") }
+    var inputAppName by remember { mutableStateOf("") }
+    var inputPackageName by remember { mutableStateOf("") }
+    var inputApkFileName by remember { mutableStateOf("") }
+    
+    // Auto-update metadata in real-time as the user types
+    LaunchedEffect(inputUrl) {
+        if (inputUrl.isNotBlank()) {
+            val cleanHost = inputUrl
+                .replace("http://", "")
+                .replace("https://", "")
+                .replace("www.", "")
+                .split("/")[0]
+                .split(".")[0]
+                .replace("[^a-zA-Z0-9]".toRegex(), "")
+                .replaceFirstChar { it.uppercase() }
+            
+            inputAppName = if (cleanHost.isNotBlank()) "$cleanHost App" else "Web App"
+            inputPackageName = "com.webapk.${cleanHost.lowercase()}"
+            inputApkFileName = "${cleanHost.ifBlank { "custom" }}_LustWebApk.apk"
+        } else {
+            inputAppName = ""
+            inputPackageName = ""
+            inputApkFileName = ""
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Section Title
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEEF2FF)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = Color(0xFF4F46E5),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = "ReactUrlTriggerComponent",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4F46E5),
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "Quick Generation Hook",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // URL input field
+            OutlinedTextField(
+                value = inputUrl,
+                onValueChange = { inputUrl = it },
+                label = { Text("Enter Website URL (React Input State)") },
+                placeholder = { Text("e.g., myportfolio.com") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        tint = Color(0xFF64748B)
+                    )
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF4F46E5),
+                    focusedLabelColor = Color(0xFF4F46E5),
+                    unfocusedBorderColor = Color(0xFFCBD5E1)
+                )
+            )
+
+            // Dynamic State-Managed Preview Panel
+            AnimatedVisibility(visible = inputUrl.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF8FAFC))
+                        .border(1.dp, Color(0xFFF1F5F9), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "STATE-MANAGED METADATA PREVIEW (Live)",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B),
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "App Title:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = inputAppName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1E293B)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "URL Source:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = inputUrl,
+                            fontSize = 11.sp,
+                            color = Color(0xFF4F46E5),
+                            maxLines = 1,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Java Package:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = inputPackageName,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF0F172A)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Output APK:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF64748B)
+                        )
+                        Text(
+                            text = inputApkFileName,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color(0xFF0F172A),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Trigger Button
+            Button(
+                onClick = {
+                    if (inputUrl.isNotBlank()) {
+                        LocalStorage.saveRecentConfiguration(
+                            context = context,
+                            name = inputAppName,
+                            url = inputUrl,
+                            packageName = inputPackageName,
+                            apkFileName = inputApkFileName
+                        )
+                        
+                        viewModel.saveProject(
+                            id = 0L,
+                            name = inputAppName,
+                            url = inputUrl,
+                            packageName = inputPackageName,
+                            orientation = "UNSPECIFIED",
+                            displayMode = "STANDARD",
+                            enableJs = true,
+                            enableZoom = true,
+                            domStorage = true,
+                            themeColor = "OCEAN_BLUE",
+                            appIcon = "language",
+                            apkFileName = inputApkFileName,
+                            onSaved = { savedProject ->
+                                viewModel.selectProject(savedProject)
+                                onNavigateToConsole(savedProject)
+                            }
+                        )
+                        
+                        Toast.makeText(context, "Initiating packaging flow...", Toast.LENGTH_LONG).show()
+                    }
+                },
+                enabled = inputUrl.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4F46E5),
+                    disabledContainerColor = Color(0xFFF1F5F9),
+                    disabledContentColor = Color(0xFF94A3B8)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "INITIATE APK GENERATION",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }

@@ -2,8 +2,8 @@ package com.example.validation
 
 object AndroidNamingValidator {
 
-    private val URL_REGEX = "^(https?:\\/\\/)?([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}(:\\d+)?(\\/.*)?$".toRegex()
-    private val PACKAGE_NAME_REGEX = "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+$".toRegex()
+    private val URL_REGEX = "^https?:\\/\\/([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}(:\\d+)?(\\/.*)?$".toRegex()
+    private val PACKAGE_NAME_REGEX = "^com\\.[a-zA-Z_][a-zA-Z0-9_]*\\.[a-zA-Z_][a-zA-Z0-9_]*(?:\\.[a-zA-Z_][a-zA-Z0-9_]*)*$".toRegex()
 
     private val JAVA_KEYWORDS = setOf(
         "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
@@ -36,7 +36,7 @@ object AndroidNamingValidator {
             return "Website URL is required and cannot be empty."
         }
         if (!URL_REGEX.matches(url)) {
-            return "Invalid website URL format (must be a valid domain structure e.g. 'https://example.com' or 'example.com')."
+            return "Invalid website URL format (must follow standard HTTP/HTTPS format, e.g., 'https://example.com')."
         }
         return null
     }
@@ -46,7 +46,7 @@ object AndroidNamingValidator {
             return "Package name is required and cannot be empty."
         }
         if (!PACKAGE_NAME_REGEX.matches(packageName)) {
-            return "Invalid structure. Must contain at least two segments separated by a dot, begin with letters/underscores, and contain no special characters (e.g. 'com.example')."
+            return "Invalid structure. Must follow 'com.domain.app' conventions (starts with 'com.', contains at least 3 segments, and contains only alphanumeric characters/underscores/dots)."
         }
         val segments = packageName.split(".")
         for (segment in segments) {

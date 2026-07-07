@@ -99,7 +99,8 @@ class WebApkViewModel(application: Application) : AndroidViewModel(application) 
         domStorage: Boolean,
         themeColor: String,
         appIcon: String = "language",
-        apkFileName: String = ""
+        apkFileName: String = "",
+        onSaved: ((WebApkProject) -> Unit)? = null
     ) {
         viewModelScope.launch {
             val formattedUrl = when {
@@ -122,13 +123,16 @@ class WebApkViewModel(application: Application) : AndroidViewModel(application) 
                 apkFileName = apkFileName.trim()
             )
             val savedId = repository.insert(project)
+            val finalProject = if (project.id == 0L) project.copy(id = savedId) else project
             
             // If editing current project, update selection
             if (_selectedProject.value?.id == project.id && project.id != 0L) {
-                _selectedProject.value = project.copy(id = project.id)
+                _selectedProject.value = finalProject
             } else if (project.id == 0L) {
-                _selectedProject.value = project.copy(id = savedId)
+                _selectedProject.value = finalProject
             }
+            
+            onSaved?.invoke(finalProject)
         }
     }
 

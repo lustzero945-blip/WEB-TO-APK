@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +40,16 @@ import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilePresent
 import androidx.compose.material.icons.filled.Loop
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,11 +102,15 @@ fun BuildConsoleScreen(
     val lazyListState = rememberLazyListState()
     var selectedTab by remember { mutableStateOf(0) }
     var selectedFileIndex by remember { mutableStateOf(0) }
+    
+    var isBuildInitiated by remember { mutableStateOf(buildState.status != BuildStatus.Idle) }
 
-    // Start compile automatically on enter
-    LaunchedEffect(project) {
-        project?.let {
-            viewModel.startBuildSimulation(it)
+    // Start compile when initiated
+    LaunchedEffect(isBuildInitiated, project) {
+        if (isBuildInitiated && buildState.status == BuildStatus.Idle) {
+            project?.let {
+                viewModel.startBuildSimulation(it)
+            }
         }
     }
 
@@ -151,12 +167,13 @@ fun BuildConsoleScreen(
         },
         containerColor = Color(0xFFF7F9FB)
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
+        if (isBuildInitiated) {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
             // SECTION 1: Build progress status card
             Card(
                 modifier = Modifier
@@ -563,6 +580,211 @@ fun BuildConsoleScreen(
                 }
             }
         }
+    } else {
+            // Show State-Managed Verification Preview Panel
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(2.dp)
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        // Header
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFEEF2FF)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.DeveloperMode,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4F46E5),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "METADATA VERIFICATION",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF4F46E5),
+                                    letterSpacing = 1.sp
+                                )
+                                Text(
+                                    text = "Verify Package Details",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E293B)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Divider
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(Color(0xFFF1F5F9))
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Detail rows
+                        MetadataPreviewRow("App Icon", if (project?.appIcon == "language") "Preset: Language Globe" else "Custom Image Selected", isIcon = true, iconName = project?.appIcon)
+                        MetadataPreviewRow("App Name", project?.name ?: "N/A")
+                        MetadataPreviewRow("Website URL", project?.url ?: "N/A", isUrl = true)
+                        MetadataPreviewRow("Java Package", project?.packageName ?: "N/A", isMonospace = true)
+                        MetadataPreviewRow("Output APK File", project?.resolveApkFileName() ?: "N/A", isMonospace = true)
+                        MetadataPreviewRow("Screen Orientation", project?.orientation ?: "UNSPECIFIED")
+                        MetadataPreviewRow("Display Lock", project?.displayMode ?: "STANDARD")
+                        MetadataPreviewRow("Theme Color Accent", project?.themeColor ?: "OCEAN_BLUE", isColorAccent = true)
+                        
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Info alert
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFEFF6FF))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Color(0xFF3B82F6),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Packaging includes custom asset directories, asset statements, and offline fallback configurations.",
+                                fontSize = 11.sp,
+                                color = Color(0xFF1E3A8A),
+                                lineHeight = 15.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Trigger Build Button
+                        Button(
+                            onClick = { isBuildInitiated = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Build,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "🚀 INITIATE PRODUCTION BUILD FLOW",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MetadataPreviewRow(
+    label: String,
+    value: String,
+    isMonospace: Boolean = false,
+    isUrl: Boolean = false,
+    isColorAccent: Boolean = false,
+    isIcon: Boolean = false,
+    iconName: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF64748B)
+        )
+        
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isColorAccent) {
+                val hexColor = when (value) {
+                    "EMERALD" -> Color(0xFF10B981)
+                    "ROYAL_PURPLE" -> Color(0xFF8B5CF6)
+                    "CRIMSON" -> Color(0xFFEF4444)
+                    "AMBER" -> Color(0xFFF59E0B)
+                    else -> Color(0xFF3B82F6) // OCEAN_BLUE
+                }
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(hexColor)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            
+            if (isIcon && iconName != null) {
+                Icon(
+                    imageVector = when (iconName) {
+                        "shopping_cart" -> Icons.Default.ShoppingCart
+                        "business" -> Icons.Default.Work
+                        "article" -> Icons.Default.Article
+                        "forum" -> Icons.Default.Forum
+                        "gamepad" -> Icons.Default.SportsEsports
+                        "book" -> Icons.Default.Book
+                        "music_note" -> Icons.Default.MusicNote
+                        else -> Icons.Default.Language
+                    },
+                    contentDescription = null,
+                    tint = Color(0xFF4F46E5),
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+
+            Text(
+                text = value,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isUrl) Color(0xFF4F46E5) else Color(0xFF1E293B),
+                fontFamily = if (isMonospace) FontFamily.Monospace else FontFamily.Default,
+                maxLines = 1,
+                textAlign = TextAlign.End,
+                modifier = Modifier.widthIn(max = 200.dp)
+            )
+        }
     }
 }
 
@@ -611,7 +833,6 @@ fun BuildStepper(
         Triple("Web wrapper package compiled and exported!", "Completing final packaging...", "Pending completion")
     )
     val activeStep = when {
-        status == BuildStatus.Failed -> -1
         status == BuildStatus.Success -> 3
         activePhase == "READY" || activePhase == "COMPLETED" -> 3
         activePhase == "SIGNING" -> 2
@@ -648,22 +869,28 @@ fun BuildStepper(
             steps.forEachIndexed { index, title ->
                 val isCompleted = index < activeStep || (status == BuildStatus.Success && index <= 3)
                 val isActive = index == activeStep && status == BuildStatus.Building
-                val isPending = index > activeStep && status != BuildStatus.Success
+                val isFailed = index == activeStep && status == BuildStatus.Failed
+                val isPending = !isCompleted && !isActive && !isFailed
 
                 val desc = when {
                     isCompleted -> stepDescriptions[index].first
                     isActive -> stepDescriptions[index].second
+                    isFailed -> "Build failed at this stage. Check terminal console logs below."
                     else -> stepDescriptions[index].third
                 }
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
                     verticalAlignment = Alignment.Top
                 ) {
                     // Left Column: Circle & Line
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(32.dp)
+                        modifier = Modifier
+                            .width(32.dp)
+                            .fillMaxHeight()
                     ) {
                         // Circle Indicator
                         Box(
@@ -674,6 +901,7 @@ fun BuildStepper(
                                     when {
                                         isCompleted -> Color(0xFF10B981) // Green for complete
                                         isActive -> Color(0xFF4F46E5) // Indigo for active
+                                        isFailed -> Color(0xFFEF4444) // Red for failure
                                         else -> Color(0xFFF1F5F9) // Gray for pending
                                     }
                                 )
@@ -684,34 +912,49 @@ fun BuildStepper(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isCompleted) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Complete",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            } else {
-                                Text(
-                                    text = (index + 1).toString(),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isActive) Color.White else Color(0xFF94A3B8)
-                                )
+                            when {
+                                isCompleted -> {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Complete",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                isFailed -> {
+                                    Icon(
+                                        imageVector = Icons.Default.Cancel,
+                                        contentDescription = "Failed",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                else -> {
+                                    Text(
+                                        text = (index + 1).toString(),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isActive) Color.White else Color(0xFF94A3B8)
+                                    )
+                                }
                             }
                         }
 
                         // Vertical connecting line
                         if (index < steps.size - 1) {
                             val isLineActive = index < activeStep
+                            val isLineFailed = status == BuildStatus.Failed && index >= activeStep
                             Box(
                                 modifier = Modifier
                                     .width(2.dp)
-                                    .height(28.dp)
+                                    .weight(1f)
                                     .background(
-                                        if (isLineActive || (status == BuildStatus.Success)) Color(0xFF10B981)
-                                        else if (isActive) Color(0xFFC7D2FE)
-                                        else Color(0xFFE2E8F0)
+                                        when {
+                                            isLineActive || (status == BuildStatus.Success) -> Color(0xFF10B981)
+                                            isLineFailed -> Color(0xFFFEE2E2)
+                                            isActive -> Color(0xFFC7D2FE)
+                                            else -> Color(0xFFE2E8F0)
+                                        }
                                     )
                             )
                         }
@@ -728,17 +971,22 @@ fun BuildStepper(
                         Text(
                             text = title,
                             fontSize = 12.sp,
-                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+                            fontWeight = if (isActive || isFailed) FontWeight.Bold else FontWeight.SemiBold,
                             color = when {
                                 isCompleted -> Color(0xFF047857)
                                 isActive -> Color(0xFF4F46E5)
+                                isFailed -> Color(0xFFEF4444)
                                 else -> Color(0xFF1E293B)
                             }
                         )
                         Text(
                             text = desc,
                             fontSize = 10.sp,
-                            color = if (isActive) Color(0xFF4F46E5) else Color(0xFF64748B)
+                            color = when {
+                                isActive -> Color(0xFF4F46E5)
+                                isFailed -> Color(0xFFEF4444)
+                                else -> Color(0xFF64748B)
+                            }
                         )
                         if (index < steps.size - 1) {
                             Spacer(modifier = Modifier.height(18.dp))

@@ -59,7 +59,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         } else {
-            // Regular Mode: We are launching as Lust URL Studio compiler
+            // Regular Mode: We are launching as Lust URL Studio compiler PWA
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 androidx.core.app.ActivityCompat.requestPermissions(
                     this,
@@ -68,7 +68,13 @@ class MainActivity : ComponentActivity() {
                 )
             }
             
-            val viewModel = ViewModelProvider(this, WebApkViewModelFactory(application))[WebApkViewModel::class.java]
+            val pwaConfig = JSONObject().apply {
+                put("url", "file:///android_asset/web/index.html")
+                put("enableJs", true)
+                put("enableZoom", false)
+                put("domStorage", true)
+                put("orientation", "UNSPECIFIED")
+            }
 
             setContent {
                 MyApplicationTheme {
@@ -76,103 +82,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                     ) {
-                        val navController = rememberNavController()
-                        NavHost(
-                            navController = navController,
-                            startDestination = "splash"
-                        ) {
-                            composable("splash") {
-                                SplashScreen(
-                                    onNavigateToHome = {
-                                        navController.navigate("home") {
-                                            popUpTo("splash") { inclusive = true }
-                                        }
-                                    }
-                                )
-                            }
-                            
-                            composable("home") {
-                                HomeScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToCreate = {
-                                        viewModel.selectProject(null)
-                                        navController.navigate("editor/0")
-                                    },
-                                    onNavigateToEdit = { id ->
-                                        navController.navigate("editor/$id")
-                                    },
-                                    onNavigateToConsole = { project ->
-                                        viewModel.selectProject(project)
-                                        navController.navigate("console")
-                                    },
-                                    onNavigateToAbout = {
-                                        navController.navigate("about")
-                                    },
-                                    onNavigateToPreview = { id ->
-                                        navController.navigate("preview/$id")
-                                    },
-                                    onNavigateToMetadataSettings = {
-                                        navController.navigate("metadata_settings")
-                                    }
-                                )
-                            }
-
-                            composable(
-                                route = "editor/{projectId}",
-                                arguments = listOf(navArgument("projectId") { type = NavType.LongType })
-                            ) { backStackEntry ->
-                                val projectId = backStackEntry.arguments?.getLong("projectId") ?: 0L
-                                ConfigEditorScreen(
-                                    projectId = projectId,
-                                    viewModel = viewModel,
-                                    onSaved = {
-                                        navController.popBackStack()
-                                    },
-                                    onCancel = {
-                                        navController.popBackStack()
-                                    }
-                                )
-                            }
-
-                            composable("console") {
-                                BuildConsoleScreen(
-                                    viewModel = viewModel,
-                                    onBack = {
-                                        navController.popBackStack()
-                                    }
-                                )
-                            }
-
-                            composable("about") {
-                                AboutScreen(
-                                    onBack = {
-                                        navController.popBackStack()
-                                    }
-                                )
-                            }
-
-                            composable("metadata_settings") {
-                                ApkMetadataScreen(
-                                    onBack = {
-                                        navController.popBackStack()
-                                    }
-                                )
-                            }
-
-                            composable(
-                                route = "preview/{projectId}",
-                                arguments = listOf(navArgument("projectId") { type = NavType.LongType })
-                            ) { backStackEntry ->
-                                val projectId = backStackEntry.arguments?.getLong("projectId") ?: 0L
-                                WebApkPreviewScreen(
-                                    projectId = projectId,
-                                    viewModel = viewModel,
-                                    onBack = {
-                                        navController.popBackStack()
-                                    }
-                                )
-                            }
-                        }
+                        PackagedWebContainer(pwaConfig)
                     }
                 }
             }
@@ -223,6 +133,8 @@ fun PackagedWebContainer(config: JSONObject) {
                     settings.apply {
                         javaScriptEnabled = enableJs
                         domStorageEnabled = domStorage
+                        allowFileAccess = true
+                        allowContentAccess = true
                         builtInZoomControls = enableZoom
                         displayZoomControls = false
                         useWideViewPort = true

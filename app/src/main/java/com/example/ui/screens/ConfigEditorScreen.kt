@@ -162,12 +162,6 @@ fun ConfigEditorScreen(
     var themeColor by remember { mutableStateOf(if (projectId == 0L) (sharedPref.getString("draft_themeColor", "OCEAN_BLUE") ?: "OCEAN_BLUE") else "OCEAN_BLUE") }
     var appIcon by remember { mutableStateOf(if (projectId == 0L) (sharedPref.getString("draft_appIcon", "language") ?: "language") else "language") }
 
-    // Validation State
-    var appNameError by remember { mutableStateOf(false) }
-    var webUrlError by remember { mutableStateOf(false) }
-    var packageNameError by remember { mutableStateOf(false) }
-    var packageNameErrorMessage by remember { mutableStateOf("") }
-
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     var showLivePreview by remember { mutableStateOf(false) }
@@ -303,12 +297,12 @@ fun ConfigEditorScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     // App Name
+                    val isAppNameError = appName.isBlank()
                     OutlinedTextField(
                         value = appName,
                         onValueChange = {
                             appName = it
                             saveDraft("appName", it)
-                            if (appNameError && it.isNotBlank()) appNameError = false
                         },
                         label = { Text("App Name (e.g., My Portfolio)") },
                         modifier = Modifier.fillMaxWidth(),
@@ -321,8 +315,8 @@ fun ConfigEditorScreen(
                             unfocusedBorderColor = Color(0xFFCBD5E1),
                             unfocusedLabelColor = Color(0xFF94A3B8)
                         ),
-                        isError = appNameError,
-                        supportingText = if (appNameError) {
+                        isError = isAppNameError,
+                        supportingText = if (isAppNameError) {
                             { Text("App name cannot be empty.", color = MaterialTheme.colorScheme.error) }
                         } else null,
                         singleLine = true
@@ -331,12 +325,14 @@ fun ConfigEditorScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Website URL
+                    val webUrlValidationError = remember(webUrl) {
+                        com.example.validation.AndroidNamingValidator.getUrlValidationError(webUrl)
+                    }
                     OutlinedTextField(
                         value = webUrl,
                         onValueChange = {
                             webUrl = it
                             saveDraft("webUrl", it)
-                            if (webUrlError && it.isNotBlank()) webUrlError = false
                         },
                         label = { Text("Website Start URL (e.g., myportfolio.com)") },
                         modifier = Modifier.fillMaxWidth(),
@@ -349,9 +345,9 @@ fun ConfigEditorScreen(
                             unfocusedBorderColor = Color(0xFFCBD5E1),
                             unfocusedLabelColor = Color(0xFF94A3B8)
                         ),
-                        isError = webUrlError,
-                        supportingText = if (webUrlError) {
-                            { Text("Website URL cannot be empty.", color = MaterialTheme.colorScheme.error) }
+                        isError = webUrlValidationError != null,
+                        supportingText = if (webUrlValidationError != null) {
+                            { Text(webUrlValidationError, color = MaterialTheme.colorScheme.error) }
                         } else null,
                         singleLine = true
                     )
@@ -359,21 +355,14 @@ fun ConfigEditorScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Package Name
+                    val packageNameValidationError = remember(packageName) {
+                        com.example.validation.AndroidNamingValidator.getPackageNameValidationError(packageName)
+                    }
                     OutlinedTextField(
                         value = packageName,
                         onValueChange = {
                             packageName = it
                             saveDraft("packageName", it)
-                            if (packageNameError) {
-                                val isPkgBlank = it.isBlank()
-                                val isPkgInvalid = !it.contains(".") || it.length < 5
-                                packageNameError = isPkgBlank || isPkgInvalid
-                                packageNameErrorMessage = when {
-                                    isPkgBlank -> "Please enter a java package identifier."
-                                    isPkgInvalid -> "Invalid package structure. Must have at least 1 dot (e.g. com.myapp)."
-                                    else -> ""
-                                }
-                            }
                         },
                         label = { Text("Java Package Name (e.g., com.portfolio.app)") },
                         modifier = Modifier.fillMaxWidth(),
@@ -386,9 +375,9 @@ fun ConfigEditorScreen(
                             unfocusedBorderColor = Color(0xFFCBD5E1),
                             unfocusedLabelColor = Color(0xFF94A3B8)
                         ),
-                        isError = packageNameError,
-                        supportingText = if (packageNameError) {
-                            { Text(packageNameErrorMessage, color = MaterialTheme.colorScheme.error) }
+                        isError = packageNameValidationError != null,
+                        supportingText = if (packageNameValidationError != null) {
+                            { Text(packageNameValidationError, color = MaterialTheme.colorScheme.error) }
                         } else null,
                         singleLine = true
                     )
